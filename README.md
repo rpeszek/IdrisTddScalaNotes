@@ -8,3 +8,5 @@ book and compare Idris to Haskell.
 
 When this work gets into a more advanced state, I will think about incorporating these Scala programs  
 [IdrisTddNotes wiki pages](https://github.com/rpeszek/IdrisTddNotes/wiki). 
+
+Very much __work-in-progress__
