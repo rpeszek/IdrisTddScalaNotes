@@ -3,9 +3,10 @@ package part1
 /**
   * TODO documentation is work-in-progress
   * I use GADT in the name to emphasise GADT-nes.
-  * 
-  * Refs:
+  *
+  * Scala version of
   * https://github.com/rpeszek/IdrisTddNotes/wiki/Part1_Sec1_4_5
+  * Refs:
   * https://stackoverflow.com/questions/33818791/stringorint-from-idris-scala
   */
 object Sec1_4_5_StringOrIntAsGADT {
