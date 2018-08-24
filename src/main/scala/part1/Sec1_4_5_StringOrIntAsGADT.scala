@@ -10,86 +10,55 @@ package part1
   * https://stackoverflow.com/questions/33818791/stringorint-from-idris-scala
   */
 object Sec1_4_5_StringOrIntAsGADT {
-  
-  sealed trait StringOrIntGADT[T]
-  case class S(s: String) extends StringOrIntGADT[String]
-  case class I(i: Int) extends StringOrIntGADT[Int]
 
-  /** this compiles with 2.12.6 (did not with 2.12.2)
-       before I would have to use ah-hoc polymorphic extract */
-  def extractStringOrInt[T](t: StringOrIntGADT[T]) : T =
-    t match {
-      case S(s) => s
-      case I(i) => i
-    }
+ // kind Bool
+ sealed trait KBool
+ sealed trait True extends KBool
+ sealed trait False extends KBool
 
-  /** This is unique Scala, it allows me to convert values of type T to StringOrIntGADT[T] */
-  sealed trait EncodeInStringOrInt[T] {
-      def apply(t: T): StringOrIntGADT[T] 
-  }
-  object EncodeInStringOrInt {
-     implicit val encodeString : EncodeInStringOrInt[String] = new EncodeInStringOrInt[String]{
-       def apply(t: String) = S(t)
-     }
-     implicit val encodeInt : EncodeInStringOrInt[Int] = new EncodeInStringOrInt[Int]{
-       def apply(t: Int) = I(t)
-     }
-  }
-  
-  /** Singleton-like construction, This is not needed in StringOrInt example
-    but is good to examine */
-  sealed trait IsStringOrIntGADT[T]
-  case object IsS extends IsStringOrIntGADT[String]
-  case object IsI extends IsStringOrIntGADT[Int]
+ // singleton for kind Bool
+ sealed trait SBool[B <: KBool]
+ case object STrue extends SBool[True]
+ case object SFalse extends SBool[False]
 
-  /** Again this is just to see Scala language capability */
-  def defaultStuff[T](c: IsStringOrIntGADT[T]) : StringOrIntGADT[T] =
-    c match {
-      case IsS => S("Hello")
-      case IsI => I(2)
-    }
+ // type constructor
+ trait StringOrInt[B <: KBool] {
+   type Out
+ }
 
-  /** Subtyping provides type level Boolean */
-  sealed trait Bool
-  case object True extends Bool
-  case object False extends Bool
-  
-  /** Provides type level mapping between Bool and String/Int types. 
-    * Somewhat mimicking type family concept in type theory or Haskell */
-  sealed trait DecideStringOrIntGADT[B, T]
-  case object PickS extends DecideStringOrIntGADT[False.type, String]
-  case object PickI extends DecideStringOrIntGADT[True.type, Int]
+ object StringOrInt {
 
-  object DecideStringOrIntGADT {
-    implicit val trueInt: DecideStringOrIntGADT[True.type, Int] = PickI
-    implicit val falseString: DecideStringOrIntGADT[False.type, String] = PickS
-  }
-  
-  def pickStringOrInt[B, T](c: DecideStringOrIntGADT[B, T]) : StringOrIntGADT[T] =
-    c match {
-      case PickS => S("Hello")
-      case PickI => I(2)
-    }
+   type Aux[B <: KBool, Out0] = StringOrInt[B] { type Out = Out0 }
 
-  /** Implements Idris book example getStringOrInt function using GADT approach and type 
-    * level Boolean. */ 
-  def getStringOrInt[T](b: Bool)(implicit ev: DecideStringOrIntGADT[b.type, T]): T =
-    extractStringOrInt(pickStringOrInt(ev))
+   implicit val trueToInt = new StringOrInt[True] { type Out = Int }
+   implicit val falseToString = new StringOrInt[False] { type Out = String }
+ }
 
-  /** Note, all this GADT wrapping is needed, this will not compile :( */
-//  def getStringOrInt2[T](b: Bool)(implicit ev: DecideStringOrIntGADT[b.type, T]): T =
-//    ev match {
-//      case PickS => "Hello"
-//      case PickI => 2
-//    }
+ object getStringOrInt {
 
-  /** Implements Idris book example using GADT approach combined with non-GADT EncodeInStringOrInt.
-    * This uses implicits quite a bit. The disapointing part of this is that I cannot just pattern match on True/False
-    * directly */
-  def valToString[T](b: Bool)(v: T)(implicit ev: EncodeInStringOrInt[T], de: DecideStringOrIntGADT[b.type, T]): String =
-    ev(v) match {
-      case S(s) => s
-      case I(i) => i.toString
-    }
-  
+   sealed trait Case[A] { val a: A }
+
+   implicit val intCase    = new Case[Int] { val a = 10 }
+   implicit val stringCase = new Case[String] { val a = "Hello" }
+
+   def apply[B <: KBool, O](bool: SBool[B])
+                           (implicit ev: StringOrInt.Aux[B, O], value: Case[O]): O = value.a
+ }
+
+ object valToString{
+
+   sealed trait Mapping[A] extends (A => String)
+
+   implicit val intMap = new Mapping[Int] {
+      def apply(a: Int): String = a.toString
+   }
+
+   implicit val stringMap = new Mapping[String] {
+     def apply(a: String): String = a
+   }
+
+   def apply[B <: KBool, A](bool: SBool[B], a: A)
+                           (implicit ev: StringOrInt.Aux[B, A], map: Mapping[A]): String =
+     map(a)
+ } 
 }
